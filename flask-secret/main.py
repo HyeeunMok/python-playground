@@ -1,9 +1,11 @@
 from flask import Flask, render_template
 from forms import LoginForm
+from flask_bootstrap import Bootstrap
 
 
 app = Flask(__name__)
 app.secret_key = "donottellanyone"
+Bootstrap(app)
 
 
 @app.route("/")
