@@ -3,12 +3,12 @@ from tkinter import *
 
 def convert_mile_to_km():
     miles = float(miles_input.get())
-    km = round(miles * 1.609)
+    km = miles * 1.609
     km_result_label.config(text=f"{km}")
 
 
 window = Tk()
-window.title("Mile to Km Converter")s
+window.title("Mile to Km Converter")
 window.config(padx=30, pady=30)
 
 FONT_STYLE = ("Arial", 15)
