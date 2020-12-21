@@ -8,7 +8,7 @@ def convert_mile_to_km():
 
 
 window = Tk()
-window.title("Mile to Km Converter")
+window.title("Mile to Km Converter")s
 window.config(padx=30, pady=30)
 
 FONT_STYLE = ("Arial", 15)
