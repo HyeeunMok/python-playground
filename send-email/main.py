@@ -1,24 +1,24 @@
 import smtplib
-
-# Replace to your email and password
-my_email = "xxxxx.cs@gmail.com"
-password = "xxxx"
-
-with smtplib.SMTP("smtp.gmail.com", 587) as connection:
-    connection.starttls()
-    connection.login(user=my_email, password=password)
-    connection.sendmail(
-        from_addr=my_email,
-        to_addrs="slothship@naver.com",
-        msg="Subject:Hello\n\nThis is the body of my email.")
+import datetime as dt
+import random
 
 
-# import datetime as dt
-#
-# now = dt.datetime.now()
-# year = now.year
-# if year == 2020:
-#     print("Wear a face mask!")
-#
-# date_of_birth = dt.datetime(year=1995, month=12, day=15, hour=14)
-# print(date_of_birth)
+MY_EMAIL = "******.cs@gmail.com"
+PASSWORD = "******"
+
+
+now = dt.datetime.now()
+weekday = now.weekday()
+if weekday == 1:
+    with open("quotes.txt") as quote_file:
+        all_quotes = quote_file.readlines()
+        quote = random.choice(all_quotes)
+
+    print(quote)
+    with smtplib.SMTP("smtp.gmail.com", 587) as connection:
+        connection.starttls()
+        connection.login(MY_EMAIL, PASSWORD)
+        connection.sendmail(
+            from_addr=MY_EMAIL,
+            to_addrs=MY_EMAIL,
+            msg=f"Subject:Monday Motivation\n\n{quote}".encode("utf8"))
