@@ -2,25 +2,24 @@ import requests
 from pprint import pprint
 import config
 
-BEARER_TOKEN = config.bearer_token
 SHEETY_PRICES_ENDPOINT = "https://api.sheety.co/4cdfef89ce12dc8f3c15d928c00419e6/flightDeals/prices"
+SHEETY_USERS_ENDPOINT = "https://api.sheety.co/4cdfef89ce12dc8f3c15d928c00419e6/flightDeals/users"
 
 
 class DataManager:
 
     def __init__(self):
         self.destination_data = {}
+        self.customer_data = {}
 
     def get_destination_data(self):
         response = requests.get(url=SHEETY_PRICES_ENDPOINT)
         data = response.json()
-        # pprint(data)
-        self.destination_data = data["prices"]
-        # pprint(self.destination_data)
+        print(data)
+        # self.destination_data = data["prices"]
+
         return self.destination_data
 
-    # In the DataManager Class make a PUT request and use the row id  from sheet_data
-    # to update the Google Sheet with the IATA codes.
     def update_destination_codes(self):
         for city in self.destination_data:
             new_data = {
@@ -28,7 +27,19 @@ class DataManager:
                     "iataCode": city["iataCode"]
                 }
             }
-            response = requests.put(url=f"{SHEETY_PRICES_ENDPOINT}/{city['id']}", json=new_data)
+            response = requests.put(
+                url=f"{SHEETY_PRICES_ENDPOINT}/{city['id']}",
+                json=new_data
+            )
             print(response.text)
 
+    def get_customer_emails(self):
+        customers_endpoint = SHEETY_USERS_ENDPOINT
+        response = requests.get(url=customers_endpoint)
+        data = response.json()
+        self.customer_data = data["users"]
+        return self.customer_data
 
+
+# dt = DataManager()
+# dt.get_destination_data()
