@@ -22,7 +22,7 @@ print(price_as_float)
 title = soup.find(id="productTitle").getText().strip()
 print(title)
 
-BUY_PRICE = 200
+BUY_PRICE = 100
 if price_as_float < BUY_PRICE:
     message = f"{title} is now ${price_as_float}"
     with smtplib.SMTP("smtp.gmail.com", 587) as connection:
