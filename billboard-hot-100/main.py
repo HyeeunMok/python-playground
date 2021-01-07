@@ -54,5 +54,6 @@ for song in song_names:
 playlist = sp.user_playlist_create(user=user_id, name=f"{date} Billboard 100", public=False)
 # print(playlist)
 #Adding songs found into the new playlist
-result = sp.user_playlist_add_tracks(user=user_id, playlist_id=playlist["id"], tracks=song_uris, position=None)
+# result = sp.user_playlist_add_tracks(user=user_id, playlist_id=playlist["id"], tracks=song_uris, position=None)
+result = sp.playlist_add_items(playlist_id=playlist["id"], items=song_uris)
 print(result)
