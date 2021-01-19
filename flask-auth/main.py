@@ -20,8 +20,16 @@ class MYSQLAlchemy(SQLAlchemy):
 
 db = MYSQLAlchemy(app)
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 ##CREATE TABLE IN DB
-class User(db.Model):
+class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True)
     password = db.Column(db.String(100))
@@ -32,41 +40,85 @@ class User(db.Model):
 
 @app.route('/')
 def home():
-    return render_template("index.html")
+    # Every render_template has a logged_in variable set.
+    return render_template("index.html", logged_in=current_user.is_authenticated)
 
 
 @app.route('/register', methods=["GET", "POST"])
 def register():
-    if request.method == 'POST':
+    if request.method == "POST":
+
+        if User.query.filter_by(email=request.form.get('email')).first():
+            #User already exists
+            flash("You've already signed up with that email, log in instead!")
+            return redirect(url_for('login'))
+
+        hash_and_salted_password = generate_password_hash(
+            request.form.get('password'),
+            method='pbkdf2:sha256',
+            salt_length=8
+        )
         new_user = User(
-            name=request.form.get('name'),
             email=request.form.get('email'),
-            password=request.form.get('password'),
+            name=request.form.get('name'),
+            password=hash_and_salted_password,
         )
         db.session.add(new_user)
         db.session.commit()
-        return render_template("secrets.html", user=new_user)
-    return render_template("register.html")
+
+        # Log in and authenticate user after adding details to database.
+        login_user(new_user)
+        return redirect(url_for("secrets"))
+
+    return render_template("register.html", logged_in=current_user.is_authenticated)
 
 
-@app.route('/login')
+@app.route('/login', methods=["GET", "POST"])
 def login():
-    return render_template("login.html")
+    if request.method == "POST":
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # Find user by email entered.
+        user = User.query.filter_by(email=email).first()
+
+        #Email doesn't exist
+        if not user:
+            flash("That email does not exist, please try again.")
+            return redirect(url_for('login'))
+        #Password incorrect
+        elif not check_password_hash(user.password, password):
+            flash('Password incorrect, please try again.')
+            return redirect(url_for('login'))
+        #Email exists and password correct
+        else:
+            login_user(user)
+            return redirect(url_for('secrets'))
+        # # Check stored password hash against entered password hashed.
+        # if check_password_hash(user.password, password):
+        #     login_user(user)
+        #     return redirect(url_for('secrets'))
+
+    return render_template("login.html", logged_in=current_user.is_authenticated)
 
 
 @app.route('/secrets')
+@login_required
 def secrets():
-    return render_template("secrets.html")
+    print(current_user.name)
+    return render_template("secrets.html", name=current_user.name, logged_in=True)
 
 
 @app.route('/logout')
 def logout():
-    pass
+    logout_user()
+    return redirect(url_for('home'))
 
 
 @app.route('/download')
+@login_required
 def download():
-    pass
+    return send_from_directory('static', filename="files/cheat_sheet.pdf")
 
 
 if __name__ == "__main__":
