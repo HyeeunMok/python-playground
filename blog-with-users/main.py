@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from flask_wtf import FlaskForm
@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from forms import CreatePostForm, RegisterForm
+from forms import CreatePostForm, RegisterForm, LoginForm
 from flask_gravatar import Gravatar
 from typing import Callable
 import config
@@ -30,6 +30,13 @@ class MYSQLAlchemy(SQLAlchemy):
 
 db = MYSQLAlchemy(app)
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 ##CONFIGURE TABLES
 
 class BlogPost(db.Model):
@@ -43,7 +50,7 @@ class BlogPost(db.Model):
     img_url = db.Column(db.String(250), nullable=False)
 # db.create_all()
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(1000), unique=True, nullable=False)
@@ -51,17 +58,28 @@ class User(db.Model):
     name = db.Column(db.String(100), nullable=False)
 db.create_all()
 
+#Everytime you call render_template(), you pass the current_user over to the template.
+#current_user.is_authenticated will be True if they are logged in/authenticated after registering.
+#You can check for this is header.html
 
 @app.route('/')
 def get_all_posts():
     posts = BlogPost.query.all()
-    return render_template("index.html", all_posts=posts)
+    return render_template("index.html", all_posts=posts, current_user=current_user)
 
 
 @app.route('/register', methods=["Get", "Post"])
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
+
+        #If user's email already exists
+        if User.query.filter_by(email=form.email.data).first():
+            #Send flash message
+            flash("You've already signed up with that email, log in instead!")
+            #Redirect to /login route
+            return redirect((url_for('login')))
+
         hash_and_salted_password = generate_password_hash(
             form.password.data,
             method='pbkdf2:sha256',
@@ -74,34 +92,59 @@ def register():
         )
         db.session.add(new_user)
         db.session.commit()
+
+        #This line will authenticate the user with Flask-Login
+        login_user(new_user)
         return redirect(url_for("get_all_posts"))
-    return render_template("register.html", form=form)
+    return render_template("register.html", form=form, current_user=current_user)
 
 
-@app.route('/login')
+@app.route('/login', methods=["GET", "POST"])
 def login():
-    return render_template("login.html")
+    form = LoginForm()
+    if form.validate_on_submit():
+        email = form.email.data
+        password = form.password.data
+
+        #Find user by email entered.
+        user = User.query.filter_by(email=email).first()
+
+        #Email doesn't exist
+        if not user:
+            flash("That email does not exist, please try again.")
+            return redirect(url_for('login'))
+        #Password incorrect
+        elif not check_password_hash(user.password, password):
+            flash("Password incorrect, please try again.")
+            return redirect(url_for('login'))
+        #Email exists and password correct
+        else:
+            login_user(user)
+            return redirect(url_for('get_all_posts'))
+
+    return render_template("login.html", form=form, current_user=current_user)
 
 
 @app.route('/logout')
 def logout():
+    logout_user()
     return redirect(url_for('get_all_posts'))
 
 
 @app.route("/post/<int:post_id>")
 def show_post(post_id):
     requested_post = BlogPost.query.get(post_id)
-    return render_template("post.html", post=requested_post)
+    return render_template("post.html", post=requested_post, current_user=current_user)
 
 
 @app.route("/about")
 def about():
-    return render_template("about.html")
+    return render_template("about.html", current_user=current_user)
 
 
 @app.route("/contact")
 def contact():
-    return render_template("contact.html")
+    return render_template("contact.html", current_user=current_user)
 
 
 @app.route("/new-post")
@@ -119,7 +162,7 @@ def add_new_post():
         db.session.add(new_post)
         db.session.commit()
         return redirect(url_for("get_all_posts"))
-    return render_template("make-post.html", form=form)
+    return render_template("make-post.html", form=form, current_user=current_user)
 
 
 @app.route("/edit-post/<int:post_id>")
@@ -139,7 +182,7 @@ def edit_post(post_id):
         post.author = edit_form.author.data
         post.body = edit_form.body.data
         db.session.commit()
-        return redirect(url_for("show_post", post_id=post.id))
+        return redirect(url_for("show_post", post_id=post.id, current_user=current_user))
 
     return render_template("make-post.html", form=edit_form)
 
